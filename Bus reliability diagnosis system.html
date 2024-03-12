@@ -1,0 +1,282 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
+<link rel="stylesheet" href="css/style2.css" />
+<link rel="stylesheet" href="css/buttonstyle.css" media="screen" type="text/css" />
+<script src="js/echarts.min.js"></script>
+	
+	<script src='https://api.mapbox.com/mapbox-gl-js/v0.44.1/mapbox-gl.js'></script>
+<link href='https://api.mapbox.com/mapbox-gl-js/v0.44.1/mapbox-gl.css' rel='stylesheet' />
+<title>公交可靠性诊断系统</title>
+</head>
+
+<body style="background-color:#EAE7E7;font-family: '宋体';vertical-align:middle;">
+<main>
+  <div style="color:white;background-color:rgb(42,170,227);width:1518px;position:relative;"> <span style="line-height:60px;height:100%;font-size:20px;"> <img src="img/Tongjilogo.png" width=4% height=8% style="vertical-align:middle"/>&nbsp;&nbsp;&nbsp;同济大学交通运输工程学院
+    </span> <span style="left:600px;position:absolute;top:3%;font-size:35px;">公交可靠性诊断系统</span></div>
+	
+	<div class="searchbar0" id="searchbar">
+    <span style="position:absolute;top:18%;width:700px;"><label for="text1" style="font-size: 25px;">线路名称:&nbsp;</label>
+    <input type="text" placeholder="线路名" id="text1" style="width:85px;height:30px;font-size: 25px;">&nbsp;
+    <input type="text" placeholder="路段名" id="text3" style="width:85px;height:30px;font-size: 25px;">&nbsp;&nbsp;&nbsp;
+    <label for="text2"  style="font-size: 25px;">期望出行时间:</label>&nbsp;&nbsp;
+    <input type="text" placeholder="单位：秒" id="text2" style="width:90px;height:30px;font-size: 20px;">
+    </span>
+    <span class="btn btn-small submit btn_1 "  id="button1" style="position:absolute;top:18%;left:600px;" >确定</span>
+    
+	  <span class="btn btn-small submit "  id="button2" style="position:absolute;top:18%;left:680px;" >清空</span>
+    </div> 
+	
+	
+	
+  <div style="width:1518px;height:720px;position: relative">
+    <div id="map"  class="map"></div>
+    <div class="sidebar">
+      <div id="p1" style="position:absolute;top:50px;color:rgb(42,170,227);font-size: 30px;">公交车数据：<img src="" id="img1" width=100% height=100% style="vertical-align:middle" border="0" alt=""/></div>
+      <div id="p2" style="position:absolute;top:360px;color:rgb(42,170,227);font-size: 30px;">出租车数据：<img src="" id="img2" width=100% height=100% style="vertical-align:middle" border="0" alt=""/></div>
+    </div>
+	  <div class="floatpic1" id="pic"><img src="img/colorbar.png" id="img3" width=100% height=100% style="vertical-align:middle"/>
+	  </div>
+  </div>
+</main>
+<script type="text/javascript" src="js/jquery.min.js"></script> 
+<script type="text/javascript" src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script> 
+<script src="js/leaflet-search.js"></script> 
+<script type="text/javascript" src="js/MovingMarker.js"></script> 
+<script type="text/javascript" src="js/script3.js"></script> 
+
+<script>
+//----全局变量----
+var marker;
+var line=[];
+var box1=[];
+var box2=[];
+var polylines;
+var jieguo=0;
+var tip=0;
+//--------function开始---------------	
+document.getElementById('button1').onclick=function searchroad(){
+	var markersLayer = new L.LayerGroup(); //layer contain searched elements
+
+map.addLayer(markersLayer);
+	tip=0;
+//-------显示图片-------
+	var index1 = document.getElementById("text1").value;//路名
+	var index2 = document.getElementById("text3").value;//路段名
+	var index3 = document.getElementById("text2").value;//期望出行时间
+	
+	var obj = document.getElementById("pic");
+  obj.setAttribute("class", "floatpic2");
+	
+	if(index1 !='' && index2 !=''){
+		$("#map").css("width","1138px");
+	$("#sidebar").css("z-index","3");
+	$("#sidebar").show();	
+	isPop=true;
+	
+var obj = document.getElementById("searchbar");
+  obj.setAttribute("class", "searchbar");
+		
+
+    var numb1 = "img/公交车图/" +"公交" +index1 + index2 + ".png";//获取输入框的value值
+	var numb2 = "img/出租车图/" +"出租"+ index1 + index2 + ".png";
+    document.getElementById('img1').setAttribute('src', numb1); //设置要加载的图片
+    document.getElementById('img2').setAttribute('src', numb2);
+	
+	}
+	
+	
+
+	
+//-----------------获取json数据------------------	
+  $.getJSON('data.json', function (gpsdata) {
+	
+    var t1=document.getElementById("text1").value;
+	var t2=document.getElementById("text3").value; 
+	  
+	  line=[];
+	  var loc;
+	  var roadname;
+	  var center;//标记
+	  var linefit=[];//定位
+//----全局搜索----
+	    if(t1==''){//路名和路段名都空
+			tip=1;
+			  	  for (var k = 0; k <gpsdata[1].length; k++) {
+		  var route=[];
+					  if(gpsdata[2][k]==1){
+						  for (var i = 0; i < gpsdata[0][k].length; i++) {
+								  linefit.push([gpsdata[0][k][i][1], gpsdata[0][k][i][0]]);}
+							  }else{
+								  for (var i = 1; i < gpsdata[0][k].length; i++) {
+								  linefit.push([gpsdata[0][k][i][1], gpsdata[0][k][i][0]]);}
+							  }
+						  for (var i = 0; i < gpsdata[0][k].length; i++) {
+			
+			route.push([gpsdata[0][k][i][1], gpsdata[0][k][i][0]]);
+		}
+		  if(gpsdata[3][k]=='0'){
+			 polylines=L.polyline(route,{color:'red',className: 'my_polyline2'});
+			  polylines.addTo(map);
+			 }else{
+		polylines=L.polyline(route,{color:'green',className: 'my_polyline2'});
+				 polylines.addTo(map);
+	}
+		  box2.push(polylines);
+	
+		  }
+		  }else{
+			  	  for (var k = 0; k <gpsdata[1].length; k++) {
+		
+		  if(t2==''){//路名填写，路段名为空
+			  if (t1==gpsdata[1][k]){
+			  roadname=gpsdata[2][k];
+				  line=[];
+				  tip=1;
+				  if(gpsdata[2][k]==1){
+						  for (var i = 0; i < gpsdata[0][k].length; i++) {
+								  linefit.push([gpsdata[0][k][i][1], gpsdata[0][k][i][0]]);}
+							  }else{
+								  for (var i = 1; i < gpsdata[0][k].length; i++) {
+								  linefit.push([gpsdata[0][k][i][1], gpsdata[0][k][i][0]]);}
+							  }
+				  
+				 for (var i = 0; i < gpsdata[0][k].length; i++) {
+			        if(i== Math.ceil(gpsdata[0][k].length/2)){      //----ceil向上取整，round四舍五入，floor向下取整
+					  loc=[gpsdata[0][k][i][1], gpsdata[0][k][i][0]];
+						  }
+			line.push([gpsdata[0][k][i][1], gpsdata[0][k][i][0]]);
+			 }
+		if(gpsdata[3][k]=='0'){
+			 polylines=L.polyline(line,{color:'red',className: 'my_polyline2'});
+			polylines.addTo(map);
+			 }else{
+		polylines=L.polyline(line,{color:'green',className: 'my_polyline2'});
+				 polylines.addTo(map);
+	}
+		box2.push(polylines);
+		marker = new L.Marker(new L.latLng(loc), {
+			title:'路段'+ roadname
+		}); //se property searched
+	marker.bindPopup('路段'+roadname);
+	markersLayer.addLayer(marker);
+				  box1.push(marker);
+		  }//if结尾  
+		  }else{
+			if (t1==gpsdata[1][k] && t2==gpsdata[2][k]){//路名和路段名都填写
+			  roadname=gpsdata[2][k];
+				  line=[];
+				tip=1;
+				  if(gpsdata[2][k]==1){
+						  for (var i = 0; i < gpsdata[0][k].length; i++) {
+								  linefit.push([gpsdata[0][k][i][1], gpsdata[0][k][i][0]]);}
+							  }else{
+								  for (var i = 1; i < gpsdata[0][k].length; i++) {
+								  linefit.push([gpsdata[0][k][i][1], gpsdata[0][k][i][0]]);}
+							  }
+				  	  for (var i = 0; i < gpsdata[0][k].length; i++) {
+						  if(i== Math.ceil(gpsdata[0][k].length/2)){
+							  loc=[gpsdata[0][k][i][1], gpsdata[0][k][i][0]];
+						  }
+			line.push([gpsdata[0][k][i][1], gpsdata[0][k][i][0]]);
+			 }
+		if(gpsdata[3][k]=='0'){
+			 polylines=L.polyline(line,{color:'red',className: 'my_polyline'});
+			polylines.addTo(map);
+			 }else{
+		polylines=L.polyline(line,{color:'green',className: 'my_polyline'});
+				 polylines.addTo(map);
+	}
+				box2.push(polylines);
+				marker = new L.Marker(new L.latLng(loc), {
+			title:'路段'+ roadname
+		}); //se property searched
+	marker.bindPopup('路段'+roadname);
+	markersLayer.addLayer(marker);
+				box1.push(marker);
+		  }//if结尾
+			  
+		  }//else结尾
+		  //if(k==Math.ceil(gpsdata[1].length)){
+			  //center=line;
+		  }//for结尾
+		  }//else结尾
+
+	  if(tip==0)
+		  {alert("没有这条路！")}
+
+	  //----定位----
+map.fitBounds(linefit);
+	  
+//----------------期望出行时间--------------
+	if(index1!='' && index2!='' && index3 != ''){
+	var k=parseInt(index2)-1;
+	var xmax=parseInt(index3);
+	var mu=parseFloat(gpsdata[4][k]);
+	var sgm=parseFloat(gpsdata[5][k]);
+	jieguo=0;	
+	var dx=0.0001;
+	var mix=0;
+	var mix2=0;
+	for (var x=-999;x<=xmax;x=x+dx){
+		mix=(x-mu)/sgm;
+		mix2=Math.pow(mix,2)*(-0.5);
+			jieguo=jieguo+(1/(Math.sqrt(2*Math.PI)*sgm))*Math.pow(Math.E,mix2)*dx;
+		}
+		jieguo=jieguo*100;
+		jieguo="概率为"+jieguo.toFixed(2)+"%";
+		document.getElementById("showing").innerHTML = "";
+document.getElementById("showing").innerHTML = jieguo ;
+	
+	} //if结尾
+			});}//function结尾
+	</script> 
+<script>
+//-----------清空地图------	
+document.getElementById('button2').onclick=function mapclear(){
+	$("#map").css("width","1518px");
+	$("#sidebar").css("z-index","1");
+	isPop=true;
+	document.getElementById("text1").value='';
+	document.getElementById("text2").value='';
+	document.getElementById("text3").value='';
+for (var p=0;p<box1.length;p++){
+map.removeLayer(box1[p]);
+}
+	for (var p=0;p<box2.length;p++){
+map.removeLayer(box2[p]);
+}
+	var obj = document.getElementById("searchbar");
+  obj.setAttribute("class", "searchbar0");
+	var obj = document.getElementById("pic");
+  obj.setAttribute("class", "floatpic1");
+}	
+	</script>
+
+	<script>
+	$(".btn_1").click(function(){
+		var index1 = document.getElementById("text1").value;//路名
+	var index2 = document.getElementById("text3").value;//路段名
+	var index3 = document.getElementById("text2").value;//期望出行时间
+		if(index1!='' && index2!='' && index3 != ''){
+       var t='<div class="dv_dialog_box">';  
+       t+=' <div class="dv_dialog">';  
+       t+=' <div class="dv_title" id="showing">请等待几秒</div>';  
+       t+='<div class="dv_btn">';  
+       t+='<button class="dialog_btn">确定</button>';
+       t+='</div>';  
+       t+=' </div>';  
+       t+='</div>';  
+       $(t).appendTo("body");  
+       $(".dialog_btn").click(function(){  
+           $(".dv_dialog_box").remove();  
+       });  
+		}
+   });  
+	</script>
+	
+	
+</body>
+</html>
